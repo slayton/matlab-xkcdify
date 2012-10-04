@@ -35,6 +35,8 @@ function operate_on_children(C, ax)
                 % hggroup child, plot-ception!
                 operate_on_children( get(c,'Children'), ax); 
                 uistack(c,'top');
+            otherwise
+                warning('Received unsupportd child of type %s', cType);
         end        
     end
     

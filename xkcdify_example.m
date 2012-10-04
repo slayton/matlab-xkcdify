@@ -56,4 +56,3 @@ set( get(get(a(2), 'Children'),'Children'), 'LineWidth', 3); % Hack to grow the 
 line(x, y, 'color', 'g', 'linewidth', 3, 'Parent', a(2));
 
 xkcdify(gca)
-%%
