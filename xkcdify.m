@@ -1,5 +1,5 @@
 function xkcdify(axHandle)
-%XKCDIFY convert an existing axes to an XKCD style axes
+%XKCDIFY redraw an existing axes in an XKCD style
 %
 %   XKCDIFY( AXES ) re-renders all childen of AXES to have a hand drawn
 %   XKCD style, http://xkcd.com, AXES can be a single axes or a vector of axes
