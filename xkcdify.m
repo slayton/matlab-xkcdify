@@ -255,6 +255,7 @@ function cartoonify_patch(p, ax)
 
     
     nNew = 0;
+    cNew = [];
     for i = 1:nPatch
         %newVtx( end+1,:) = oldVtx( 1 + (i-1)*nOld , : );
         [x, y] = up_sample_and_jitter(xPts(:,i), yPts(:,i), xJitter, yJitter, nNew);
@@ -264,7 +265,9 @@ function cartoonify_patch(p, ax)
         yNew(:,i) = y(:);
         nNew = numel(x);
         
-        cNew(:,i) = interp1( linspace( 0 , 1, nOld), cData(:,i), linspace(0, 1, nNew));
+        if ~isempty(cData)
+            cNew(:,i) = interp1( linspace( 0 , 1, nOld), cData(:,i), linspace(0, 1, nNew));
+        end
      
         
         newVtx(end+1,1:2) = oldVtx( 1 + (i-1)*(nOld+1), 1:2);
