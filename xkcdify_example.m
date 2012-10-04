@@ -1,6 +1,7 @@
 
 %% - Example 1, XKCDify simple line plots
 clear;
+clc;
 close all;
 
 figure('Position', [100 460 1120 420]);
@@ -15,10 +16,10 @@ plot(x,y1,x,y2,x,y3, 'linewidth', 4, 'Parent', a(1));
 plot(x,y1,x,y2,x,y3, 'linewidth', 4, 'Parent', a(2));
 set(a, 'XLim', [x(1) - .25, x(end)+.25], 'YLim', [-.9 .9]);
 
-xkcdify(gca);
+xkcdify(a(2));
 
 %% - Example 2, XKCDify a bar plot with a line plot on top
-clear; close all;
+clear; close all; clc;
 
 figure('Position', [100 460 1120 420]);
 a(1) = subplot(121); a(2) = subplot(122);
@@ -38,7 +39,7 @@ xkcdify(a(2));
 set(a, 'XLim', [.5 4.5], 'YLim', [0 7]);
 
 %% - Example 3, XKCDify a boxplot with a line plot on top
-close all;
+clear; close all; clc;
 n = 5;  data = rand(20,n) * 5;
 x = 1:n; y =  mean(data) + rand(1,n);
 
@@ -56,3 +57,24 @@ set( get(get(a(2), 'Children'),'Children'), 'LineWidth', 3); % Hack to grow the 
 line(x, y, 'color', 'g', 'linewidth', 3, 'Parent', a(2));
 
 xkcdify(gca)
+
+%% - Example 4, XKCDify a subset of axes inside a figure
+
+clear; close all; clc;
+figure('Position', [300   500  800   300]);
+x = 0:.1: 2 * pi;
+y1 = sin(x);
+y2 = cos(x);
+
+for i = 1:3
+    a(i) = subplot(1,3,i);
+    
+    plot(x * i, sin(x ./ (i/2)), x*i, cos(x ./ (i/2)), 'Parent', a(i), 'linewidth', 4);
+    set(a(i), 'XLim', [x(1) - .25, x(end)+.25] * i, 'YLim', [-1.2 1.2]);
+end
+
+xkcdify(a(2:3))
+
+
+
+

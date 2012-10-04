@@ -1,14 +1,23 @@
 function xkcdify(axHandle)
 
+    
     if nargin==0
         error('axHandle must be specified');
     end
     
-    axCh = get(axHandle, 'Children');
- 
-    operate_on_children(axCh, axHandle);
+    for axN = 1:numel(axHandle)
+        ax = axHandle(axN);
 
-end
+        pixPerX = [];
+        pixPerY = [];
+    
+        
+        axChildren = get(ax, 'Children');
+        operate_on_children(axChildren, ax);
+        
+    end
+
+
 
 function operate_on_children(C, ax)
 
@@ -49,7 +58,7 @@ function cartoonify_line(l,  ax)
 
     %only jitter lines with more than 1 point   
     if numel(xpts)>1 
- 
+
         [pixPerX, pixPerY] = getPixelsPerUnit();
  
         % I should figure out a better way to calculate this
@@ -89,12 +98,9 @@ function [x, y] = up_sample_and_jitter(x, y, jx, jy, n)
         ptsPerPix = 1/4;
         n = ceil( n * ptsPerPix);
     end
-  
-%     n = max(numel(x), n); % don't down sample, only up sample!
-    
+   
     x = interp1( linspace(0, 1, numel(x)) , x, linspace(0, 1, n) );
     y = interp1( linspace(0, 1, numel(y)) , y, linspace(0, 1, n) );
-    
     
     x = x + smooth( generateNoise(n) .* rand(n,1) .* jx )';
     y = y + smooth( generateNoise(n) .* rand(n,1) .* jy )';
@@ -126,53 +132,45 @@ end
 function add_background_mask(xpts, ypts, w, ax)
    
     bg = get(ax, 'color');
-    line(xpts, ypts, 'linewidth', w, 'color', bg);
+    line(xpts, ypts, 'linewidth', w, 'color', bg, 'Parent', ax);
     
 end
 
-function [pixPerX, pixPerY] = getPixelsPerUnit()
+function [ppX ppY] = getPixelsPerUnit()
 
+    if ~isempty(pixPerX) && ~ isempty(pixPerY)
+        ppX = pixPerX;
+        ppY = pixPerY;
+        return;
+    end
     %get the size of the current axes in pixels
     %get the lims of the current axes in plotting units
     %calculate the number of pixels per plotting unit
     
-    ax = gca;
-    pixData = get(gcf,'UserData');
-    if isempty(pixData) || ~isstruct(pixData)
-        
-        % if the current axes contains a box plot then we need to create a
-        % temporary axes as changing the units on a boxplot causes the
-        % pos(4) to be set to 0
-        axUserData = get(gca,'UserData');
-        if ~isempty(axUserData) && iscell(axUserData) && strcmp(axUserData{1}, 'boxplot')
-            axTemp = axes('Units','normalized','Position', get(ax,'Position'));
-            set(axTemp,'Units', 'pixels');
-            pos = get(axTemp,'position');
-            delete(axTemp);
-        else
-            units = get(gca,'Units');
-            set(gca,'Units', 'pixels');
-            pos = get(gca,'Position');
-            set(gca,'Units', units);
-        end
-       
-        
-        xLim = get(gca, 'XLim');
-        yLim = get(gca, 'YLim');
-       
-        pixData.pixPerX = pos(3) ./ diff(xLim);
-        pixData.pixPerY = pos(4) ./ diff(yLim);
-        
-        % store the pixData struct in the figure so we can reference it
-        % later. Ideally we would need to store this in the AXES but
-        % because boxplot stores data there we can't store it there.
-        set(gcf,'UserData', pixData);
+
+    % if the current axes contains a box plot then we need to create a
+    % temporary axes as changing the units on a boxplot causes the
+    % pos(4) to be set to 0
+    axUserData = get(ax,'UserData');
+    if ~isempty(axUserData) && iscell(axUserData) && strcmp(axUserData{1}, 'boxplot')
+        axTemp = axes('Units','normalized','Position', get(ax,'Position'));
+        set(axTemp,'Units', 'pixels');
+        pos = get(axTemp,'position');
+        delete(axTemp);
+    else
+        units = get(ax,'Units');
+        set(ax,'Units', 'pixels');
+        pos = get(ax,'Position');
+        set(ax,'Units', units);
     end
-    
-    pixPerX = pixData.pixPerX;
-    pixPerY = pixData.pixPerY;
-    
-end
+
+    xLim = get(ax, 'XLim');
+    yLim = get(ax, 'YLim');
+
+    ppX = pos(3) ./ diff(xLim);
+    ppY = pos(4) ./ diff(yLim);
+
+end  
 
 function [ len ] = getLineLength(x, y)
 
@@ -280,4 +278,7 @@ function cartoonify_patch(p, ax)
     set(p, 'CData', cNew, 'FaceVertexCData', newFaceVtxCData, 'Faces', newFaces,  ...
         'Vertices', newVtx, 'XData', xNew, 'YData', yNew, 'VertexNormals', newVtxNorm);
     set(p, 'EdgeColor', 'none');
+end
+
+
 end
