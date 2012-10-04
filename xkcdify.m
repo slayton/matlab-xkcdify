@@ -1,4 +1,29 @@
 function xkcdify(axHandle)
+%XKCDIFY convert an existing axes to an XKCD style axes
+%
+%   XKCDIFY( AXES ) re-renders all childen of AXES to have a hand drawn
+%   XKCD style, http://xkcd.com, AXES can be a single axes or a vector of axes
+%
+%   NOTE: Only plots of type LINE and PATCH are re-rendered. This should 
+%   be sufficient for the majority of 2d plots such as:
+%       - plot
+%       - bar
+%       - boxplot
+%       - etc...
+%
+%   NOTE: This function does not alter the actual style of the axes
+%   themselves, that functionality will be added in the next version.  I
+%   still have to figure out the best way to do this, if you have a
+%   suggestion please email me!
+%
+%   Finally the most up to date version of this code can be found at:
+%   https://github.com/slayton/matlab-xkcdify
+%
+% Copyright(c) 2012, Stuart P. Layton <stuart.layton@gmail.com> MIT
+% http://stuartlayton.com
+
+% Revision History
+%   2012/10/04 - Initial Release
 
     
     if nargin==0
@@ -10,8 +35,7 @@ function xkcdify(axHandle)
 
         pixPerX = [];
         pixPerY = [];
-    
-        
+   
         axChildren = get(ax, 'Children');
         operate_on_children(axChildren, ax);
         

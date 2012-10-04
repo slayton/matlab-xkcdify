@@ -1,3 +1,15 @@
+% This file contains a simple Matlab script that demonstrates how to use
+% xkcdify.m  
+%
+% The most up to date version of this file can be found at
+% https://github.com/slayton/matlab-xkcdify
+%
+% Copyright(c) 2012, Stuart P. Layton <stuart.layton@gmail.com>
+% http://stuartlayton.com
+%
+% Revision History
+%   2012/10/04 - Initial Release
+
 
 %% - Example 1, XKCDify simple line plots
 clear;
@@ -61,7 +73,7 @@ xkcdify(gca)
 %% - Example 4, XKCDify a subset of axes inside a figure
 
 clear; close all; clc;
-figure('Position', [300   500  800   300]);
+figure('Position', [100 460 1120 420]);
 x = 0:.1: 2 * pi;
 y1 = sin(x);
 y2 = cos(x);
@@ -72,7 +84,6 @@ for i = 1:3
     plot(x * i, sin(x ./ (i/2)), x*i, cos(x ./ (i/2)), 'Parent', a(i), 'linewidth', 4);
     set(a(i), 'XLim', [x(1) - .25, x(end)+.25] * i, 'YLim', [-1.2 1.2]);
 end
-
 xkcdify(a(2:3))
 
 
