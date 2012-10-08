@@ -1,4 +1,4 @@
-function xkcdify(axHandle)
+function xkcdify(axesList, renderAxesLines)
 %XKCDIFY redraw an existing axes in an XKCD style
 %
 %   XKCDIFY( AXES ) re-renders all childen of AXES to have a hand drawn
@@ -28,22 +28,84 @@ function xkcdify(axHandle)
     
     if nargin==0
         error('axHandle must be specified');
+    elseif ~all( ishandle(axesList) )
+        error('axHandle must be a valid axes handle');
+    elseif ~all( strcmp( get(axesList, 'type'), 'axes') )
+        error('axHandle must be a valid axes handle');
     end
     
-    for axN = 1:numel(axHandle)
-        ax = axHandle(axN);
+    if nargin==1
+        renderAxesLines = 0;
+    end
+    
+    for axN = 1:numel(axesList)
+        axHandle = axesList(axN);
 
         pixPerX = [];
         pixPerY = [];
    
-        axChildren = get(ax, 'Children');
-        operate_on_children(axChildren, ax);
+        axChildren = get(axHandle, 'Children');
+        operareOnChildren(axChildren, axHandle);
+    
+        if renderAxesLines == 1
+            renderNewAxesLine(axHandle)
+        end
         
     end
 
+    
+    
+function renderNewAxesLine(ax)
+    
+    nPixOffset = 15;
+    
+    isBoxOn = strcmp( get(ax,'Box'), 'on' );
+    set(ax,'Box', 'off');
+    % Get the correct location for the next axes
+    pos = getAxesPositionInUnits(ax,'Pixels');
+    pos(1:2) = pos(1:2) - nPixOffset;
+
+    if isBoxOn
+        pos(3:4) = pos(3:4) + nPixOffset*2;
+    else
+        pos(3:4) = pos(3:4) + nPixOffset;
+    end
+    
+    
+    newAxes = axes('Units', 'pixels', 'Position', pos, 'Color', 'none');
+    set(newAxes,'Units', get(ax,'Units'), 'XTick', [], 'YTick', []);
+   
+    
+    [px py] = getPixelsPerUnitForAxes(newAxes);
+    dx = nPixOffset / px;
+    dy = nPixOffset / py;      
+    
+    xlim = get(newAxes,'XLim');
+    ylim = get(newAxes, 'YLim');
+
+    
+    axArgs = {'Parent', newAxes, 'Color', 'k', 'LineWidth', 4};
+    axLine(1) = line( [dx dx], ylim + [dy -dy], axArgs{:});
+    axLine(2) = line( xlim + [dx -dx], [dy dy], axArgs{:});
+    
+    %if 'Box' is on then draw the top and right edges of thea axes
+    if isBoxOn
+        axLine(3) = line( xlim(2) - [dx dx] + .00001, ylim + [dy -dy], axArgs{:});
+        axLine(4) = line( xlim + [dx -dx], ylim(2) - [dy dy] + .00001,  axArgs{:});
+    end
+    
+    axis(newAxes, 'off');
+    for i = 1:numel(axLine)
+        cartoonifyAxesEdge(axLine(i), newAxes);
+    end
+      
+    set(ax, 'FontName', 'Comic Sans MS', 'FontSize', 14);
+    
+   
+end
 
 
-function operate_on_children(C, ax)
+function operareOnChildren(C, ax)
 
     % iterate on the individual children but in reverse order
     % also ensure that C is treated as a row vector
@@ -56,17 +118,17 @@ function operate_on_children(C, ax)
                 
         switch cType
             case 'line'
-                cartoonify_line(c, ax);
+                cartoonifyLine(c, ax);
                 uistack(c,'top');
 
             case 'patch'
-                cartoonify_patch(c, ax);
+                cartoonifyPatch(c, ax);
                 uistack(c,'top');
-
+ 
             case 'hggroup'              
                 % if not a line or patch operate on the children of the
                 % hggroup child, plot-ception!
-                operate_on_children( get(c,'Children'), ax); 
+                operareOnChildren( get(c,'Children'), ax); 
                 uistack(c,'top');
             otherwise
                 warning('Received unsupportd child of type %s', cType);
@@ -75,7 +137,11 @@ function operate_on_children(C, ax)
     
 end
 
-function cartoonify_line(l,  ax)
+function cartoonifyLine(l,  ax)
+    
+    if nargin==2
+        addMask = 1;
+    end
 
     xpts = get(l, 'XData')';
     ypts = get(l, 'YData')';
@@ -83,7 +149,7 @@ function cartoonify_line(l,  ax)
     %only jitter lines with more than 1 point   
     if numel(xpts)>1 
 
-        [pixPerX, pixPerY] = getPixelsPerUnit();
+        [pixPerX, pixPerY] = getPixelsPerUnitForAxes(ax);
  
         % I should figure out a better way to calculate this
         xJitter = 6 / pixPerX; 
@@ -98,20 +164,52 @@ function cartoonify_line(l,  ax)
             yJitter = 0;      
         end
         
-        [xpts, ypts] = up_sample_and_jitter(xpts, ypts, xJitter, yJitter);
+        [xpts, ypts] = upSampleAndJitter(xpts, ypts, xJitter, yJitter);
                
     end
     
     set(l, 'XData', xpts , 'YData', ypts, 'linestyle', '-');
     
-    add_background_mask(xpts, ypts, get(l, 'LineWidth') * 3, ax);
+    
+    addBackgroundMask(xpts, ypts, get(l, 'LineWidth') * 3, ax);
+
 
     
 end
 
+function cartoonifyAxesEdge(l, ax)
+    
+    xpts = get(l, 'XData')';
+    ypts = get(l, 'YData')';
+
+    %only jitter lines with more than 1 point   
+    if numel(xpts)>1 
+
+        [pixPerX, pixPerY] = getPixelsPerUnitForAxes(ax);
+ 
+        % I should figure out a better way to calculate this
+        xJitter = 3 / pixPerX; 
+        yJitter = 3 / pixPerY;
+
+        if all( diff( ypts) == 0) 
+            % if the line is horizontal don't jitter in X
+            xJitter = 0;
+        
+        elseif all( diff( xpts) == 0)
+            % if the line is veritcal don't jitter in y
+            yJitter = 0;      
+        end
+        
+        [xpts, ypts] = upSampleAndJitter(xpts, ypts, xJitter, yJitter);
+               
+    end
+    
+    set(l, 'XData', xpts , 'YData', ypts, 'linestyle', '-');    
+end
 
 
-function [x, y] = up_sample_and_jitter(x, y, jx, jy, n)
+
+function [x, y] = upSampleAndJitter(x, y, jx, jy, n)
 
     % we want to upsample the line to have a number of that is proportional
     % to the number of pixels the line occupies on the screen. Long lines
@@ -153,13 +251,66 @@ function noise = generateNoise(n)
     noise = noise(:);
 end
 
-function add_background_mask(xpts, ypts, w, ax)
+function addBackgroundMask(xpts, ypts, w, ax)
    
     bg = get(ax, 'color');
     line(xpts, ypts, 'linewidth', w, 'color', bg, 'Parent', ax);
     
 end
 
+function pos = getAxesPositionInUnits(ax, units)
+    
+    if strcmp( get( ax,'Units'), units )
+        pos = get(ax,'Position');
+        return;
+    end
+    % if the current axes contains a box plot then we need to create a
+    % temporary axes as changing the units on a boxplot causes the
+    % pos(4) to be set to 0
+    axUserData = get(ax,'UserData');
+    if ~isempty(axUserData) && iscell(axUserData) && strcmp(axUserData{1}, 'boxplot')
+        axTemp = axes('Units','normalized','Position', get(ax,'Position'));
+        set(axTemp,'Units', units);
+        pos = get(axTemp,'position');
+        delete(axTemp);
+    else
+        origUnits = get(ax,'Units');
+        set(ax,'Units', 'pixels');
+        pos = get(ax,'Position');
+        set(ax,'Units', origUnits);
+    end
+
+    
+end
+function setAxesPositionInUnits(ax, pos, units)
+    
+    if strcmp( get( ax,'Units'), units )
+        set(ax,'Position', pos);
+        return;
+    end
+    
+    % if the current axes contains a box plot then we need to create a
+    % temporary axes as changing the units on a boxplot causes the
+    % pos(4) to be set to 0
+    axUserData = get(ax,'UserData');
+    if ~isempty(axUserData) && iscell(axUserData) && strcmp(axUserData{1}, 'boxplot')
+        axTemp = axes('Units', get(ax,'Units'), 'Position', get(ax,'Position'));
+        origUnit = get(axTemp,'Units');
+        set(axTemp,'Units', units);
+        set(axTemp,'position', pos);
+        set(axTemp, 'Units', origUnit);
+        set(ax, 'Position', get(axTemp, 'Position') );
+        delete(axTemp);
+    else
+        origUnits = get(ax,'Units');
+        set(ax,'Units', units);
+        set(ax,'Potision', pos);
+        set(ax,'Units', origUnits);
+    end
+end
+
+% Main function for converting units to pixels, refers to the main drawing
+% axes
 function [ppX ppY] = getPixelsPerUnit()
 
     if ~isempty(pixPerX) && ~ isempty(pixPerY)
@@ -167,34 +318,26 @@ function [ppX ppY] = getPixelsPerUnit()
         ppY = pixPerY;
         return;
     end
+    [ppX ppY] = getPixelsPerUnitForAxes(axHandle);
+end
+
+% Worker function for converting units to pixels, can be used with any axes
+% allowing it to be used with subsequently created axes that are involved
+% in rendering the axes lines
+function [px py] = getPixelsPerUnitForAxes(axH)
     %get the size of the current axes in pixels
     %get the lims of the current axes in plotting units
     %calculate the number of pixels per plotting unit
-    
+    pos = getAxesPositionInUnits(axH, 'Pixels');
+   
+    xLim = get(axH, 'XLim');
+    yLim = get(axH, 'YLim');
 
-    % if the current axes contains a box plot then we need to create a
-    % temporary axes as changing the units on a boxplot causes the
-    % pos(4) to be set to 0
-    axUserData = get(ax,'UserData');
-    if ~isempty(axUserData) && iscell(axUserData) && strcmp(axUserData{1}, 'boxplot')
-        axTemp = axes('Units','normalized','Position', get(ax,'Position'));
-        set(axTemp,'Units', 'pixels');
-        pos = get(axTemp,'position');
-        delete(axTemp);
-    else
-        units = get(ax,'Units');
-        set(ax,'Units', 'pixels');
-        pos = get(ax,'Position');
-        set(ax,'Units', units);
-    end
+    px = pos(3) ./ diff(xLim);
+    py = pos(4) ./ diff(yLim);
+end
 
-    xLim = get(ax, 'XLim');
-    yLim = get(ax, 'YLim');
 
-    ppX = pos(3) ./ diff(xLim);
-    ppY = pos(4) ./ diff(yLim);
-
-end  
 
 function [ len ] = getLineLength(x, y)
 
@@ -227,7 +370,7 @@ end
 % blue.  This doesn't prevent the user from reseting the color after the
 % fact using set(barHandle, 'FaceColor', color) which IMHO is an acceptable
 % workaround
-function cartoonify_patch(p, ax)
+function cartoonifyPatch(p, ax)
     
     xPts = get(p, 'XData');
     yPts = get(p, 'YData');
@@ -258,7 +401,7 @@ function cartoonify_patch(p, ax)
     cNew = [];
     for i = 1:nPatch
         %newVtx( end+1,:) = oldVtx( 1 + (i-1)*nOld , : );
-        [x, y] = up_sample_and_jitter(xPts(:,i), yPts(:,i), xJitter, yJitter, nNew);
+        [x, y] = upSampleAndJitter(xPts(:,i), yPts(:,i), xJitter, yJitter, nNew);
 
 
         xNew(:,i) = x(:);
@@ -284,7 +427,7 @@ function cartoonify_patch(p, ax)
         t = repmat( oldVtxNorm( 1+1 + (i-1)*(nOld+1) , : ), nNew, 1);
         newVtxNorm( end+ (1 : nNew) , : ) = t;
         
-        add_background_mask(xNew(:,i), yNew(:,i), 6, ax);
+        addBackgroundMask(xNew(:,i), yNew(:,i), 6, ax);
        
     end
     
@@ -304,7 +447,7 @@ function cartoonify_patch(p, ax)
       
     set(p, 'CData', cNew, 'FaceVertexCData', newFaceVtxCData, 'Faces', newFaces,  ...
         'Vertices', newVtx, 'XData', xNew, 'YData', yNew, 'VertexNormals', newVtxNorm);
-    set(p, 'EdgeColor', 'none');
+    %set(p, 'EdgeColor', 'none');
 end
 
 
