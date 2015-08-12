@@ -239,7 +239,7 @@ function noise = generateNoise(n)
     while i < iEnd
         if randi(10,1,1) < 2
             
-            upDown = randsample([-1 1], 1);
+            upDown = (rand > 0.5)*2 - 1;
             
             maxDur = max( min(iEnd - i, 100), 1);
             duration = randi( maxDur , 1, 1);
